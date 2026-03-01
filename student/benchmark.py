@@ -3,15 +3,13 @@ import math
 from typing import Callable
 import torch
 import torch.nn as nn
-from a1_basics.model import BasicsTransformerLM
+import a1_basics.model
 
 def get_device():
     return "cuda" if torch.cuda.is_available() else "cpu"
 
-
 def mean(values: list[float]) -> float:
     return sum(values) / len(values)
-
 
 def stdev(values: list[float]) -> float:
     """Calculate the standard deviation of a list of values."""
@@ -20,7 +18,6 @@ def stdev(values: list[float]) -> float:
     m = mean(values)
     variance = sum((x - m) ** 2 for x in values) / (len(values) - 1)
     return math.sqrt(variance)
-
 
 def run_transformer(
     vocab_size: int,
@@ -35,7 +32,7 @@ def run_transformer(
     requires_backward: bool
 ) -> Callable:
     """Setup and return a function that runs the Transformer forward/(backward) for a single step."""
-    model = BasicsTransformerLM(
+    model = a1_basics.model.BasicsTransformerLM(
         vocab_size=vocab_size,
         context_length=context_length,
         d_model=d_model,
@@ -69,7 +66,6 @@ def run_transformer(
                 _ = model(x)
     return run
 
-
 def benchmark(description: str, run: Callable, num_warmups: int = 3, num_steps: int = 10) -> float:
     """Benchmark `run` by executing it `num_steps` times, return mean time in ms.
     Includes standard deviation calculation.
@@ -95,10 +91,8 @@ def benchmark(description: str, run: Callable, num_warmups: int = 3, num_steps: 
     mean_time = mean(times)
     std_time = stdev(times)
     
-    # 格式化输出：均值 ± 标准差
     print(f"{description}: {mean_time:.2f} ms ± {std_time:.2f} ms (over {num_steps} steps)")
     return mean_time
-
 
 def print_gpu_specs():
     """Print GPU specifications if available."""
@@ -110,63 +104,62 @@ def print_gpu_specs():
         print(f"    Total memory: {properties.total_memory / 1e9:.2f} GB")
         print(f"    Multiprocessors: {properties.multi_processor_count}")
 
-
-def benchmark_transformer_scaling():
-    """Benchmark Transformer with different scaling factors."""
+def benchmark_model_sizes():
+    """Benchmark Transformer across table sizes and varying context lengths."""
     print("\n" + "=" * 60)
-    print("BENCHMARKING TRANSFORMER SCALING")
+    print("BENCHMARKING TABLE CONFIGURATIONS & CONTEXT LENGTHS")
     print("=" * 60)
 
-    base_config = {
-        "vocab_size": 10000,
-        "batch_size": 4,
-        "context_length": 512,
-        "d_model": 256,
-        "num_layers": 4,
-        "num_heads": 4,
-        "d_ff": 1024,
-        "rope_theta": 10000.0,
-        "sequence_length": 128,
-        "requires_backward": True
+    # Dictionary mapped directly from the provided table
+    model_configs = {
+        "small": {"d_model": 768, "d_ff": 3072, "num_layers": 12, "num_heads": 12},
+        "medium": {"d_model": 1024, "d_ff": 4096, "num_layers": 24, "num_heads": 16},
+        # "large": {"d_model": 1280, "d_ff": 5120, "num_layers": 36, "num_heads": 20},
+        # "xl": {"d_model": 1600, "d_ff": 6400, "num_layers": 48, "num_heads": 25},
+        # "2.7B": {"d_model": 2560, "d_ff": 10240, "num_layers": 32, "num_heads": 32},
     }
 
-    print(f"\nBase config: d_model={base_config['d_model']}, layers={base_config['num_layers']}, "
-          f"batch={base_config['batch_size']}, seq_len={base_config['sequence_length']}")
-    
-    base_time = benchmark(
-        "run_transformer (base, fwd+bwd)",
-        run_transformer(**base_config)
-    )
+    # Parameters to test
+    context_lengths = [128, 256, 512, 1024]
+    batch_size = 4  # Kept small to mitigate OOM on larger models
+    vocab_size = 10000
 
-    print("\n--- Forward Only vs Forward+Backward ---")
-    fwd_config = base_config.copy()
-    fwd_config["requires_backward"] = False
-    fwd_time = benchmark(
-        "run_transformer (forward only)",
-        run_transformer(**fwd_config)
-    )
-    print(f"  Ratio (Fwd+Bwd / Fwd): ~{base_time/fwd_time:.2f}x")
-
-    print("\n--- Scaling number of layers ---")
-    for scale in (2, 3, 4):
-        config = base_config.copy()
-        config["num_layers"] = scale * base_config["num_layers"]
-        result = benchmark(
-            f"run_transformer({scale}x num_layers)",
-            run_transformer(**config)
-        )
-        print(f"  Expected ~{scale}x, actual ~{result/base_time:.2f}x")
-
-    print("\n--- Scaling batch size ---")
-    for scale in (2, 3, 4):
-        config = base_config.copy()
-        config["batch_size"] = scale * base_config["batch_size"]
-        result = benchmark(
-            f"run_transformer({scale}x batch_size)",
-            run_transformer(**config)
-        )
-        print(f"  Expected ~{scale}x, actual ~{result/base_time:.2f}x")
-
+    for size_name, config in model_configs.items():
+        print(f"\n--- Testing Model Size: {size_name.upper()} ---")
+        
+        for ctx_len in context_lengths:
+            desc = f"Size: {size_name:<6} | Ctx/Seq: {ctx_len:<4} | Bsz: {batch_size}"
+            
+            try:
+                runner = run_transformer(
+                    vocab_size=vocab_size,
+                    context_length=ctx_len,
+                    d_model=config["d_model"],
+                    num_layers=config["num_layers"],
+                    num_heads=config["num_heads"],
+                    d_ff=config["d_ff"],
+                    rope_theta=10000.0,
+                    batch_size=batch_size,
+                    sequence_length=ctx_len, # Match sequence length to context length
+                    requires_backward=True
+                )
+                
+                # Execute benchmark
+                benchmark(desc, runner, num_warmups=3, num_steps=5)
+                
+                # Clean up memory explicitly before next iteration to prevent fragmentation
+                del runner
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                    
+            except RuntimeError as e:
+                # Catch CUDA Out of Memory errors gracefully so the script continues
+                if "out of memory" in str(e).lower():
+                    print(f"{desc}: OOM (CUDA Out of Memory)")
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+                else:
+                    raise e # Re-raise if it's a different runtime error
 
 def main():
     print("Benchmarking BasicsTransformerLM")
@@ -181,15 +174,14 @@ def main():
     import time
     benchmark("sleep(50ms)", lambda: time.sleep(50 / 1000), num_warmups=2, num_steps=3)
 
-    benchmark_transformer_scaling()
+    # Run the table configurations
+    benchmark_model_sizes()
 
     print("\n" + "=" * 60)
     print("OBSERVATIONS:")
     print("- Standard Deviation (±): Small values indicate a stable measurement environment.")
-    print("- Scaling layers: should scale ~linearly.")
-    print("- Forward vs Backward: backward pass adds significant overhead.")
+    print("- OOM Handling: Larger configurations will skip gracefully if VRAM limits are exceeded.")
     print("=" * 60)
-
 
 if __name__ == "__main__":
     main()
