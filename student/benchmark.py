@@ -37,7 +37,7 @@ def run_transformer(
     """Setup and return a function that runs the Transformer forward/(backward) for a single step."""
     
     if annotated:
-        a1_basics.model.scaled_dot_product_attention = annotated_scaled_dot_product_attention
+        a1_basics.model.scaled_dot_product_attention = a1_basics.model.annotated_scaled_dot_product_attention
     
     model = a1_basics.model.BasicsTransformerLM(
         vocab_size=vocab_size,
