@@ -66,7 +66,7 @@ def run_transformer(
                 _ = model(x)
     return run
 
-def benchmark(description: str, run: Callable, num_warmups: int = 3, num_steps: int = 10) -> float:
+def benchmark(description: str, run: Callable, num_warmups: int = 5, num_steps: int = 10) -> float:
     """Benchmark `run` by executing it `num_steps` times, return mean time in ms.
     Includes standard deviation calculation.
     """
@@ -172,7 +172,7 @@ def main():
 
     print("\n--- Sanity check: benchmarking sleep ---")
     import time
-    benchmark("sleep(50ms)", lambda: time.sleep(50 / 1000), num_warmups=2, num_steps=3)
+    benchmark("sleep(50ms)", lambda: time.sleep(50 / 1000), num_warmups=5, num_steps=10)
 
     # Run the table configurations
     benchmark_model_sizes()
