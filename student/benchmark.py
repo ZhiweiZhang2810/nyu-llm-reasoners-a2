@@ -32,8 +32,13 @@ def run_transformer(
     sequence_length: int,
     requires_backward: bool,
     mixed_precision: bool = False,
+    annotated: bool = False,
 ) -> Callable:
     """Setup and return a function that runs the Transformer forward/(backward) for a single step."""
+    
+    if annotated:
+        a1_basics.model.scaled_dot_product_attention = annotated_scaled_dot_product_attention
+    
     model = a1_basics.model.BasicsTransformerLM(
         vocab_size=vocab_size,
         context_length=context_length,
@@ -43,6 +48,7 @@ def run_transformer(
         d_ff=d_ff,
         rope_theta=rope_theta
     ).to(get_device())
+
 
     if mixed_precision and get_device() == "cuda":
         ctx = torch.autocast(device_type="cuda", dtype=torch.bfloat16)
@@ -149,7 +155,8 @@ def benchmark_model_sizes():
                     rope_theta=10000.0,
                     batch_size=batch_size,
                     sequence_length=ctx_len, # Match sequence length to context length
-                    requires_backward=True
+                    requires_backward=True,
+                    annotated=True,
                 )
                 
                 # Execute benchmark
