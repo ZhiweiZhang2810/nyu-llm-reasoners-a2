@@ -134,39 +134,43 @@ def benchmark_model_sizes():
     for size_name, config in model_configs.items():
         print(f"\n--- Testing Model Size: {size_name.upper()} ---")
         
-        for ctx_len in context_lengths:
-            desc = f"Size: {size_name:<6} | Ctx/Seq: {ctx_len:<4} | Bsz: {batch_size}"
-            
-            try:
-                runner = run_transformer(
-                    vocab_size=vocab_size,
-                    context_length=ctx_len,
-                    d_model=config["d_model"],
-                    num_layers=config["num_layers"],
-                    num_heads=config["num_heads"],
-                    d_ff=config["d_ff"],
-                    rope_theta=10000.0,
-                    batch_size=batch_size,
-                    sequence_length=ctx_len, # Match sequence length to context length
-                    requires_backward=True
-                )
+        for mixed_precision in [True, False]:
+            print(f"\n--- Testing Mixed Precision: {mixed_precision} ---")
+
+            for ctx_len in context_lengths:
+                desc = f"Size: {size_name:<6} | Ctx/Seq: {ctx_len:<4} | Bsz: {batch_size}"
                 
-                # Execute benchmark
-                benchmark(desc, runner, num_warmups=3, num_steps=5)
+                try:
+                    runner = run_transformer(
+                        vocab_size=vocab_size,
+                        context_length=ctx_len,
+                        d_model=config["d_model"],
+                        num_layers=config["num_layers"],
+                        num_heads=config["num_heads"],
+                        d_ff=config["d_ff"],
+                        rope_theta=10000.0,
+                        batch_size=batch_size,
+                        sequence_length=ctx_len, # Match sequence length to context length
+                        requires_backward=True,
+                        mixed_precision=mixed_precision
+                    )
                 
-                # Clean up memory explicitly before next iteration to prevent fragmentation
-                del runner
-                if torch.cuda.is_available():
-                    torch.cuda.empty_cache()
-                    
-            except RuntimeError as e:
-                # Catch CUDA Out of Memory errors gracefully so the script continues
-                if "out of memory" in str(e).lower():
-                    print(f"{desc}: OOM (CUDA Out of Memory)")
+                    # Execute benchmark
+                    benchmark(desc, runner, num_warmups=3, num_steps=5)
+                
+                    # Clean up memory explicitly before next iteration to prevent fragmentation
+                    del runner
                     if torch.cuda.is_available():
                         torch.cuda.empty_cache()
-                else:
-                    raise e # Re-raise if it's a different runtime error
+                    
+                except RuntimeError as e:
+                    # Catch CUDA Out of Memory errors gracefully so the script continues
+                    if "out of memory" in str(e).lower():
+                        print(f"{desc}: OOM (CUDA Out of Memory)")
+                        if torch.cuda.is_available():
+                            torch.cuda.empty_cache()
+                    else:
+                        raise e # Re-raise if it's a different runtime error
 
 def main():
     print("Benchmarking BasicsTransformerLM")
