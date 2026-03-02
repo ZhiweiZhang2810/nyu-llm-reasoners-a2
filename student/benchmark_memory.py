@@ -31,13 +31,9 @@ def run_transformer(
     batch_size: int,
     sequence_length: int,
     requires_backward: bool,
-    mixed_precision: bool = False,
-    annotated: bool = False,
+    mixed_precision: bool
 ) -> Callable:
     """Setup and return a function that runs the Transformer forward/(backward) for a single step."""
-    
-    if annotated:
-        a1_basics.model.scaled_dot_product_attention = a1_basics.model.annotated_scaled_dot_product_attention
     
     model = a1_basics.model.BasicsTransformerLM(
         vocab_size=vocab_size,
@@ -163,7 +159,7 @@ def benchmark_model_sizes():
                     batch_size=batch_size,
                     sequence_length=ctx_len, 
                     requires_backward=True,
-                    annotated=True,
+                    mixed_precision=True
                 )
                 
                 # Execute benchmark
