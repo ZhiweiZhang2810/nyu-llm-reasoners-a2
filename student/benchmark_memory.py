@@ -137,15 +137,11 @@ def benchmark_model_sizes():
 
     # Dictionary mapped directly from the provided table
     model_configs = {
-        "small": {"d_model": 768, "d_ff": 3072, "num_layers": 12, "num_heads": 12},
-        "medium": {"d_model": 1024, "d_ff": 4096, "num_layers": 24, "num_heads": 16},
-        "large": {"d_model": 1280, "d_ff": 5120, "num_layers": 36, "num_heads": 20},
-        "xl": {"d_model": 1600, "d_ff": 6400, "num_layers": 48, "num_heads": 25},
         "2.7B": {"d_model": 2560, "d_ff": 10240, "num_layers": 32, "num_heads": 32},
     }
 
     # Parameters to test
-    context_lengths = [128, 256, 512, 1024]
+    context_lengths = [128, 256, 512]
     batch_size = 4  # Kept small to mitigate OOM on larger models
     vocab_size = 10000
 
@@ -198,7 +194,7 @@ def main():
 
     print("\n--- Sanity check: benchmarking sleep ---")
     import time
-    benchmark("sleep(50ms)", lambda: time.sleep(50 / 1000), num_warmups=5, num_steps=10)
+    benchmark("sleep(50ms)", lambda: time.sleep(50 / 1000), num_warmups=5, num_steps=10, mixed_precision=True)
 
     # Run the table configurations
     benchmark_model_sizes()
