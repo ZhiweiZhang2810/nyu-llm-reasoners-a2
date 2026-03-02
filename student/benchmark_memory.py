@@ -190,7 +190,7 @@ def main():
 
     print("\n--- Sanity check: benchmarking sleep ---")
     import time
-    benchmark("sleep(50ms)", lambda: time.sleep(50 / 1000), num_warmups=5, num_steps=10, mixed_precision=True)
+    benchmark("sleep(50ms)", lambda: time.sleep(50 / 1000), num_warmups=5, num_steps=10)
 
     # Run the table configurations
     benchmark_model_sizes()
