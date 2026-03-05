@@ -3,7 +3,7 @@ import triton
 import itertools
 import math
 
-from .a1_basics.model import scaled_dot_product_attention
+import a1_basics.model
 from .flash_triton import FlashAttention2ForwardTriton
 
 def standard_pytorch_attention(Q, K, V, is_causal=True):
