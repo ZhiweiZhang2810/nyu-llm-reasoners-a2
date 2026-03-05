@@ -3,26 +3,28 @@ import triton
 import itertools
 import math
 
-# 此处导入你的实现
-# from student.flash_pytorch import FlashAttention2ForwardPyTorch # 如果需要
-# from student.flash_triton import FlashAttention2ForwardTriton
-# 为了脚本独立运行，假设你已经正确导入或定义了 FlashAttention2ForwardTriton
+from .a1_basics.model import scaled_dot_product_attention
+from .flash_triton import FlashAttention2ForwardTriton
 
 def standard_pytorch_attention(Q, K, V, is_causal=True):
     """标准的 PyTorch 实现，用于作为 Baseline 对比"""
-    B, N_q, D = Q.shape
-    scale = 1.0 / math.sqrt(D)
-    S = torch.matmul(Q, K.transpose(-2, -1)) * scale
-    
-    if is_causal:
-        row_idx = torch.arange(N_q, device=Q.device).view(-1, 1)
-        col_idx = torch.arange(N_q, device=Q.device).view(1, -1)
-        mask = col_idx > row_idx
-        S = torch.where(mask, float('-inf'), S)
-        
-    P = torch.softmax(S, dim=-1)
-    O = torch.matmul(P, V)
+
+    O = scaled_dot_product_attention(Q, K, V, is_causal=is_causal)
     return O
+
+    # B, N_q, D = Q.shape
+    # scale = 1.0 / math.sqrt(D)
+    # S = torch.matmul(Q, K.transpose(-2, -1)) * scale
+    
+    # if is_causal:
+    #     row_idx = torch.arange(N_q, device=Q.device).view(-1, 1)
+    #     col_idx = torch.arange(N_q, device=Q.device).view(1, -1)
+    #     mask = col_idx > row_idx
+    #     S = torch.where(mask, float('-inf'), S)
+        
+    # P = torch.softmax(S, dim=-1)
+    # O = torch.matmul(P, V)
+    # return O
 
 def run_benchmark():
     # 参数扫描空间
