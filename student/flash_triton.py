@@ -39,7 +39,8 @@ class FlashAttention2ForwardTriton(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, grad_output):
-        raise NotImplementedError("Backward pass not yet implemented.")
+        from flash_back import backward
+        return backward(ctx, grad_output)
 
 @triton.jit
 def flash_fwd_kernel(
