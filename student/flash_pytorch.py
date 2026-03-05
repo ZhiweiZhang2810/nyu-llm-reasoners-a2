@@ -11,7 +11,7 @@ class FlashAttention2ForwardPyTorch(torch.autograd.Function):
         scale = 1.0 / (D ** 0.5)
         
         O = torch.zeros_like(Q)
-        L = torch.zeros((B, N_q, 1), device=Q.device, dtype=torch.float32)
+        L = torch.zeros((B, N_q), device=Q.device, dtype=torch.float32)
         
         # Iterate over query tiles
         for i in range(0, N_q, B_q):
@@ -53,7 +53,7 @@ class FlashAttention2ForwardPyTorch(torch.autograd.Function):
             
             # 6. Final normalization and LSE calculation
             O[:, i:i+B_q, :] = O_i / l_i
-            L[:, i:i+B_q, :] = m_i + torch.log(l_i)
+            L[:, i:i+B_q] = (m_i + torch.log(l_i)).squeeze(-1)
             
         ctx.save_for_backward(L, Q, K, V, O)
         ctx.is_causal = is_causal
