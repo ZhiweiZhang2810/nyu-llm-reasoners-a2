@@ -61,7 +61,7 @@ class FlashAttention2ForwardPyTorch(torch.autograd.Function):
 
     @staticmethod
     def backward(ctx, grad_output):
-        from flash_back import backward
+        from .flash_back import backward
         return backward(ctx, grad_output)
 
     
