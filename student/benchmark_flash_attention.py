@@ -9,8 +9,8 @@ from student.flash_triton import FlashAttention2ForwardTriton
 def standard_pytorch_attention(Q, K, V, is_causal=True):
     B, N, D = Q.shape
     if is_causal:
-        causal_mask = torch.full((N, N), float('-inf'), device=Q.device, dtype=Q.dtype)
-        causal_mask = torch.triu(causal_mask, diagonal=1)
+        # Create an N x N boolean mask: True on the lower triangle, False on the upper
+        causal_mask = torch.ones((N, N), device=Q.device, dtype=torch.bool).tril()
         return a1_basics.model.scaled_dot_product_attention(Q, K, V, mask=causal_mask)
     else:
         return a1_basics.model.scaled_dot_product_attention(Q, K, V)

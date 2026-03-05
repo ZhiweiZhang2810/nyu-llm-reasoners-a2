@@ -8,8 +8,14 @@ class FlashAttention2ForwardTriton(torch.autograd.Function):
         B, N_QUERIES, D = Q.shape
         _, N_KEYS, _ = K.shape
         
-        Q_TILE_SIZE = 64
-        K_TILE_SIZE = 64
+        # 动态分配 Tile Size：当维度过大时，缩小分块以塞入 SRAM
+        if D >= 128:
+            Q_TILE_SIZE = 32
+            K_TILE_SIZE = 32
+        else:
+            Q_TILE_SIZE = 64
+            K_TILE_SIZE = 64
+            
         scale = 1.0 / (D ** 0.5)
 
         O = torch.empty_like(Q)
