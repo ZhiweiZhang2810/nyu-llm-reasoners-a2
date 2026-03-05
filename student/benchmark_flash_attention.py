@@ -9,7 +9,7 @@ from .flash_triton import FlashAttention2ForwardTriton
 def standard_pytorch_attention(Q, K, V, is_causal=True):
     """标准的 PyTorch 实现，用于作为 Baseline 对比"""
 
-    O = scaled_dot_product_attention(Q, K, V, is_causal=is_causal)
+    O = a1_basics.model.scaled_dot_product_attention(Q, K, V, is_causal=is_causal)
     return O
 
     # B, N_q, D = Q.shape
