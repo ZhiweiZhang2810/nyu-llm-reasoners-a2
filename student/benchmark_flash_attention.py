@@ -6,8 +6,10 @@ import math
 import a1_basics.model
 from student.flash_triton import FlashAttention2ForwardTriton
 
-def standard_pytorch_attention(Q, K, V, is_causal=True):
-    return a1_basics.model.scaled_dot_product_attention(Q, K, V, is_causal=is_causal)
+def standard_pytorch_attention(Q, K, V):
+    causal_mask = torch.full((N, N), float('-inf'), device=Q.device, dtype=Q.dtype)
+    causal_mask = torch.triu(causal_mask, diagonal=1)
+    return a1_basics.model.scaled_dot_product_attention(Q, K, V, mask=causal_mask)
 
 def run_benchmark():
     # 参数扫描空间
